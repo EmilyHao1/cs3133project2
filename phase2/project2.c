@@ -4,13 +4,15 @@
 #include <linux/syscalls.h>
 
 unsigned long **sys_call_table;
+struct ancestry {
+	pid_t ancestors[10];
+	pid_t siblings[100];
+	pid_t children[100];
+};
 
 asmlinkage long (*ref_sys_cs3013_syscall1)(void);
-/* Restore original system calls */
-asmlinkage long (*ref_sys_open)(const char* pathname, int flag, mode_t mode);
-asmlinkage long (*ref_sys_close)(unsigned int fd);
-asmlinkage long (*ref_sys_read)(unsigned int fd, void *buf, size_t count);
 
+asmlinkeage long (*cs3013_syscall2)(unsigned short *target pid, struct ancestry *response);
 
 asmlinkage long new_sys_cs3013_syscall1(void) {
   printk(KERN_INFO "\"'Hello world?!' More like 'Goodbye, world!' EXTERMINATE!\" -- Dalek");
@@ -18,50 +20,8 @@ asmlinkage long new_sys_cs3013_syscall1(void) {
 }
 
 /* Create new open systemcall */
-asmlinkage long new_sys_open(const char* pathname, int flag, mode_t mode) {
-	int uid;
-	uid = current_uid().val;
-	/* If the usrid is larget than 1000 than it is a usr action,
-	 * since Ubuntu regular user accounts start at UID 1000.
-	 */
-	if(uid >= 1000)
-	{
-		printk(KERN_INFO "User %d is opening file: %s\n", uid, pathname);
-	}
-  return ref_sys_open(pathname, flag, mode);
-}
-
-/* Create new close systemcall */
-asmlinkage long new_sys_close(unsigned int fd) {
-	int uid;
-	uid = current_uid().val;
-	/* If the usrid is larget than 1000 than it is a usr action,
-	 * since Ubuntu regular user accounts start at UID 1000.
-	 */
-	if(uid >= 1000)
-	{
-		printk(KERN_INFO "User %d is closing file descriptor: %d\n", uid, fd);
-	}
-  return ref_sys_close(fd);
-}
-
-/* Create new read systemcall */
-asmlinkage long new_sys_read(unsigned int fd, void *buf, size_t count) {
-	int uid;
-	long result;
-	uid = current_uid().val;
-	result = ref_sys_read(fd, buf, count);
-	/* If the usrid is larget than 1000 than it is a usr action,
-	 * since Ubuntu regular user accounts start at UID 1000.
-	 */
-	if(uid >= 1000)
-	{
-		if(strstr(buf, "VIRUS"))
-		{
-			printk(KERN_INFO "User %d read from file descriptor %d, but that read contained malicious code!\n", uid, fd);
-		}
-	}
-  return result;
+asmlinkage long cs3013_syscall2(unsigned short *target pid, struct ancestry *response) {
+	
 }
 
 
