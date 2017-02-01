@@ -1,0 +1,1 @@
+cmd_/home/zluo2/cs3133project2/phase2/phase2.ko := ld -r -m elf_i386 -T ./scripts/module-common.lds --build-id  -o /home/zluo2/cs3133project2/phase2/phase2.ko /home/zluo2/cs3133project2/phase2/phase2.o /home/zluo2/cs3133project2/phase2/phase2.mod.o

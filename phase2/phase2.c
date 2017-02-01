@@ -2,28 +2,50 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/syscalls.h>
-
+#include <linux/sched.h>
+#include <linux/list.h>
+#include <asm/current.h>
 unsigned long **sys_call_table;
-struct ancestry {
-	pid_t ancestors[10];
+
+/* Structure Ancestor */
+struct ancestry
+{
+	pid_t ancestor[10];
 	pid_t siblings[100];
 	pid_t children[100];
 };
 
 asmlinkage long (*ref_sys_cs3013_syscall1)(void);
-
-asmlinkeage long (*cs3013_syscall2)(unsigned short *target pid, struct ancestry *response);
+/* Modify syscall2 so it can take parameter */
+asmlinkage long (*ref_sys_cs3013_syscall2)(unsigned short *target_pid, struct ancestry *response);
 
 asmlinkage long new_sys_cs3013_syscall1(void) {
   printk(KERN_INFO "\"'Hello world?!' More like 'Goodbye, world!' EXTERMINATE!\" -- Dalek");
   return 0;
 }
 
-/* Create new open systemcall */
-asmlinkage long cs3013_syscall2(unsigned short *target pid, struct ancestry *response) {
-	
+/* Create new  syscall2 */
+asmlinkage long new_sys_cs3013_syscall2(unsigned short *target_pid, struct ancestry *response) {
+	struct task_struct *child;//Record child process
+	struct task_struct *task;//Record child process
+	struct task_struct *parent = current->parent;	/* Obtain the process descriptor of its parent */
+	struct list_head *list;//List of all structure
+	/* iterate over a process's children with macro list_for_each */
+	list_for_each(list, &current->children)
+	{
+		task = list_entry(list, struct task_struct, sibling);
+		/* child now points to one of curent's children */
+		if(task->pid == *target_pid)
+		{
+			child = task;
+		} else
+		{
+			//printk(KERN_INFO "PID %h not found", &target_pid);
+		}
+	}
+  //printk(KERN_INFO "The target pid is %h", &target_pid);
+  return 0;
 }
-
 
 static unsigned long **find_sys_call_table(void) {
   unsigned long int offset = PAGE_OFFSET;
@@ -80,18 +102,18 @@ static int __init interceptor_start(void) {
   
   /* Store a copy of all the existing functions */
   ref_sys_cs3013_syscall1 = (void *)sys_call_table[__NR_cs3013_syscall1];
-  ref_sys_open = (void *)sys_call_table[__NR_open];
-  ref_sys_close = (void *)sys_call_table[__NR_close];
-  ref_sys_read = (void *)sys_call_table[__NR_read];
+  ref_sys_cs3013_syscall2 = (void *)sys_call_table[__NR_cs3013_syscall2];
+
+  
 
 
   /* Replace the existing system calls */
   disable_page_protection();
 
   sys_call_table[__NR_cs3013_syscall1] = (unsigned long *)new_sys_cs3013_syscall1;
-  sys_call_table[__NR_open] = (unsigned long *)new_sys_open;
-  sys_call_table[__NR_close] = (unsigned long *)new_sys_close;
-  sys_call_table[__NR_read] = (unsigned long *)new_sys_read;
+  sys_call_table[__NR_cs3013_syscall2] = (unsigned long *)new_sys_cs3013_syscall2;
+
+  
 
   
   enable_page_protection();
@@ -110,9 +132,9 @@ static void __exit interceptor_end(void) {
   /* Revert all system calls to what they were before we began. */
   disable_page_protection();
   sys_call_table[__NR_cs3013_syscall1] = (unsigned long *)ref_sys_cs3013_syscall1;
-  sys_call_table[__NR_open] = (unsigned long *)ref_sys_open;
-  sys_call_table[__NR_close] = (unsigned long *)ref_sys_close;
-  sys_call_table[__NR_read] = (unsigned long *)ref_sys_read;
+  sys_call_table[__NR_cs3013_syscall2] = (unsigned long *)ref_sys_cs3013_syscall2;
+
+  
 
   enable_page_protection();
 
