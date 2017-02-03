@@ -5,6 +5,8 @@
 #include <linux/sched.h>
 #include <linux/list.h>
 #include <asm/current.h>
+#include <linux/pid.h>
+
 unsigned long **sys_call_table;
 
 /* Structure Ancestor */
@@ -26,23 +28,61 @@ asmlinkage long new_sys_cs3013_syscall1(void) {
 
 /* Create new  syscall2 */
 asmlinkage long new_sys_cs3013_syscall2(unsigned short *target_pid, struct ancestry *response) {
-	struct task_struct *child;//Record child process
-	struct task_struct *task;//Record child process
-	struct task_struct *parent = current->parent;	/* Obtain the process descriptor of its parent */
-	struct list_head *list;//List of all structure
-	/* iterate over a process's children with macro list_for_each */
-	list_for_each(list, &current->children)
-	{
-		task = list_entry(list, struct task_struct, sibling);
-		/* child now points to one of curent's children */
-		if(task->pid == *target_pid)
-		{
-			child = task;
-		} else
-		{
-			//printk(KERN_INFO "PID %h not found", &target_pid);
+	
+	//struct task_struct *child;//Record child process
+	struct task_struct *task = pid_task(find_vpid(*target_pid), PIDTYPE_PID) ;//Record child process
+	///struct task_struct *parent;	/* Obtain the process descriptor of its parent */
+	//unsigned short *user =target_pid; 
+	//if(copy-from-user(user, target_pid, sizeof(unsigned short)){
+	//	return -EFAULT;
+	//}
+	
+	//parent
+	if(task->parent->pid!=1){
+	int i = 0; 
+	struct task_struct *ancestor; 
+	for(ancestor = task; ancestor !=&init_task; ancestor = ancestor->parent){
+		response->ancestor[i] = ancestor->pid;
+		printk(KERN_INFO "the parent pid is %d\n", ancestor->pid); 
 		}
+	}else{
+		response->ancestor[0] = -1; 
+		printk(KERN_INFO "There is no ancestor"); 
 	}
+	
+	//children 
+	if(list_empty(&task->children)){
+		int i = 0;
+		struct task_struct *children;
+		struct list_head *list; //List of all structure 
+		list_for_each(list, &task->children) {
+       			children = list_entry(list, struct task_struct, sibling);
+        		response->children[i]= children->pid; 
+			printk(KERN_INFO "The children pid is %d\n", &children->pid); 
+			i++;
+		}
+	}else{
+		response->children[0] = -1; 
+		printk(KERN_INFO "There is no children in this %d\n", &task->parent->pid); 
+	}
+	//sibling
+	if(list_empty(&task->sibling)){
+		int i = 0; 
+		struct task_struct *siblings; 
+		struct list_head *listnd; //List of all structure
+		list_for_each(listnd, &task->sibling){
+			siblings = list_entry(listnd, struct task_struct, sibling);
+			response->siblings[i] = siblings->pid; 
+			printk(KERN_INFO "The children pid is %d\n", &siblings->pid);
+			i++;
+		}
+	}else{
+		response->siblings[0] = -1; 
+		printk(KERN_INFO "There is no siblings in this %d\n", &task->parent->pid);
+	}
+	
+	
+
   //printk(KERN_INFO "The target pid is %h", &target_pid);
   return 0;
 }
